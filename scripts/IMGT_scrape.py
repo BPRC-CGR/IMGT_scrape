@@ -32,10 +32,10 @@ def create_library(folder: Path):
                 w.write(f.read())
 
 
-def construct_url(segment, species):
+def construct_url(segment, species, frame):
     base_url = "https://www.imgt.org/genedb/GENElect"
     params = {
-        'query': f"7.2 {segment}",
+        'query': f"{frame} {segment}",
         'species': species
     }
     return f"{base_url}?{urlencode(params)}"
@@ -58,8 +58,8 @@ def write_sequence(name, folder, sequence):
         f.write(str(sequence) + "\n")
 
 
-def fetch_sequence(segment, folder, species):
-    url = construct_url(segment, species)
+def fetch_sequence(segment, folder, species, frame):
+    url = construct_url(segment, species, frame)
     response = requests.get(url)
     if response.status_code == 200:
         sequence = scrape(response)
@@ -74,7 +74,7 @@ def fetch_sequence(segment, folder, species):
     time.sleep(2)
 
 
-def scrape_IMGT(species, imune_type, folder):
+def scrape_IMGT(species, imune_type, folder, frame):
     segments = {"TCR": ["TRBV", "TRBJ", "TRBD", "TRAV", "TRAJ", "TRDD", "TRDJ", "TRDV", "TRGV", "TRGJ"],
                 "IG": ['IGHV', 'IGHD', 'IGHJ', 'IGKV', 'IGKJ', 'IGLV', 'IGLJ']}
     if not folder.exists():
@@ -84,7 +84,7 @@ def scrape_IMGT(species, imune_type, folder):
         logging.info(
             f"Retrieving sequences from IMGT for the {segment} of {species}")
         if not Path(folder / f"{segment}.fasta").exists():
-            fetch_sequence(segment, folder, species)
+            fetch_sequence(segment, folder, species, frame)
         else:
             logging.info(f"File {segment}.fasta already exists skipping!")
             time.sleep(2)
@@ -92,6 +92,11 @@ def scrape_IMGT(species, imune_type, folder):
 
 def to_capital(string: str):
     return string.capitalize()
+
+
+def convert_frame(frame):
+    options = {"all": "7.2", "in-frame": "7.5", "in-frame-gaps": "7.1"}
+    return options[frame or "all"]
 
 
 def argparser_setup():
@@ -103,12 +108,14 @@ def argparser_setup():
     ]
     parser = argparse.ArgumentParser(
         description='Scrape IMGT for TCR and IG segment sequences of a given species.')
-    parser.add_argument('-S', "--species", type=to_capital, choices=latin_names,
+    parser.add_argument('-S', "--species", type=to_capital, choices=latin_names, required=True,
                         help='Name of the species to scrape for (e.g., "Homo sapiens")')
     parser.add_argument('-T', '--type', type=str.upper, choices=[
-                        'TCR', 'IG'], help='Choose between TCR (T-cell receptor) or IG (Immunoglobulin)')
+                        'TCR', 'IG'], required=True, help='Choose between TCR (T-cell receptor) or IG (Immunoglobulin)')
     parser.add_argument('-O', '--output', type=str,
                         help='Output directory where the results will be saved.')
+    parser.add_argument('-f', '--frame-selection', type=str, choices=['all', 'in-frame', 'in-frame-gaps'],
+                        help='Select ORF frame analysis type: "all" for all P, "in-frame" for in-frame P, or "in-frame-gaps" for in-frame P with IMGT gaps.')
     parser.add_argument('--create-library', action='store_true',
                         help='Create a library from the IMGT files if specified.')
     parser.add_argument('--cleanup', action='store_true',
@@ -121,14 +128,16 @@ def argparser_setup():
 def main():
     cwd = Path.cwd()
     args = argparser_setup()
+    convert_frame(args.frame_selection)
     logging.info(f"Selected species: {args.species} and type: {args.type}")
     folder_name = args.species.replace(" ", "_").lower()
     if args.output:
         folder_name = args.output
     folder = cwd / folder_name
     library = Path.cwd() / "library" / "library.fasta"
-    if args.cleanup and not Path.exists(library):
-        scrape_IMGT(args.species, args.type, folder)
+    if args.cleanup is not None and not Path.exists(library):
+        scrape_IMGT(args.species, args.type, folder,
+                    convert_frame(args.frame_selection))
         if not library.exists():
             if args.create_library:
                 logging.info(f"Creating a library for generating files.")
