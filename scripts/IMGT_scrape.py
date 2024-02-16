@@ -115,7 +115,7 @@ def argparser_setup():
     parser.add_argument('-O', '--output', type=str,
                         help='Output directory where the results will be saved.')
     parser.add_argument('-f', '--frame-selection', type=str, choices=['all', 'in-frame', 'in-frame-gaps'],
-                        help='Select ORF frame analysis type: "all" for all P, "in-frame" for in-frame P, or "in-frame-gaps" for in-frame P with IMGT gaps.')
+                        help='Select ORF frame analysis type: "all" for F+ORF+all P, "in-frame" for F+ORF+in-frame P , or "in-frame-gaps" for F+ORF+in-frame P with IMGT gaps.')
     parser.add_argument('--create-library', action='store_true',
                         help='Create a library from the IMGT files if specified.')
     parser.add_argument('--cleanup', action='store_true',
@@ -128,7 +128,6 @@ def argparser_setup():
 def main():
     cwd = Path.cwd()
     args = argparser_setup()
-    convert_frame(args.frame_selection)
     logging.info(f"Selected species: {args.species} and type: {args.type}")
     folder_name = args.species.replace(" ", "_").lower()
     if args.output:
