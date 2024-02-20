@@ -56,7 +56,9 @@ Optional Arguments
 
 ## Example Command
 
-```python3 IMGT_scrape.py -S "Homo sapiens" -T TCR --create-library --cleanup```
+``` bash
+python3 IMGT_scrape.py -S "Homo sapiens" -T TCR --create-library --cleanup
+```
 
 This command fetches TCR sequences for Homo sapiens, creates a library from them, and cleans up the workspace.
 
