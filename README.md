@@ -27,12 +27,15 @@ You must have conda installed! If not installed: Visit Conda Installation Guide 
 
 Create the environment, this is straightforward: Navigate to the project directory, probably called IMGT_scrape with the terminal and run the following command to create the conda environment from the env.yml file:
 
-
-```conda env create -f envs/env.yaml```
+```bash
+conda env create -f envs/env.yaml
+```
 
 Activate the environment: Once the environment is created, activate it with:
 
-```conda activate IMGT```
+``` bash
+conda activate IMGT
+```
 
 ## Usage
 
