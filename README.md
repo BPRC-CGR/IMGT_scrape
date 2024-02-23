@@ -52,12 +52,13 @@ Optional Arguments
 -f, --frame-selection: ORF frame analysis type (all, in-frame, in-frame-gaps).
 --create-library: Consolidate fetched sequences into a single library file.
 --cleanup: Delete fetched files after processing.
+--simple-headers: Create more simple headers.
 ```
 
 ## Example Command
 
 ``` bash
-python3 IMGT_scrape.py -S "Homo sapiens" -T TCR --create-library --cleanup
+python3 IMGT_scrape.py -S "Homo sapiens" -T TCR --create-library --cleanup --simple-headers
 ```
 
 This command fetches TCR sequences for Homo sapiens, creates a library from them, and cleans up the workspace.
