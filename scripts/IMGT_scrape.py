@@ -230,7 +230,7 @@ def scrape_IMGT(species, immune_type, directory, frame):
         species (str): The chosen species, which is choses from the
         argparse list for species.
         immune_type (str): The type of receptor that is being used. 
-        Either TCR or IG.
+        Either TR or IG.
         directory (Path): Path to the directory.
         frame (str): the chosen frame, which is choses from the argparse
         list for regarding frame.
