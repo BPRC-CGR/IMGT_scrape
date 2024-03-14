@@ -18,7 +18,7 @@ class CustomFormatter(logging.Formatter):
         return f"{COLORS.get(levelname, '')}{message}{COLORS['ENDC']}"
 
 
-def custom_logger(name):
+def custom_logger(name=__name__):
     """
     Creates a custom logger with a custom name. Custom 
     logger with a specific name. It sets a custom DEBUG and formatters that
