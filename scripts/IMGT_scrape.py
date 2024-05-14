@@ -125,6 +125,23 @@ def scrape(response):
             return seq
 
 
+def file_empty(file_path):
+    """
+    Checks if a file is empty by evaluating its size using the pathlib module. 
+    This function assesses whether the file at the specified path exists and, if it does, 
+    whether its size is zero bytes. It uses the `Path` object from `pathlib` to interact with the 
+    file system, making it more intuitive and readable compared to older os-based methods.
+
+    Args:
+    file_path (str or Path): The path to the file to check. Can be a string or a Path object.
+
+    Returns:
+    bool: True if the file exists and is empty (size is 0 bytes), False otherwise.
+    """
+    path = Path(file_path)
+    return path.exists() and path.stat().st_size == 0
+
+
 def write_sequence(name, directory, sequence):
     """
     Write the found VDJ segment sequenecs. It first establish a base fasta file. 
@@ -141,39 +158,48 @@ def write_sequence(name, directory, sequence):
     logger.info(f"Writing sequences from {name} to {file.name}")
     with open(file, 'w') as f:
         f.write(str(sequence) + "\n")
+    return file_empty(file)
 
 
-def fetch_sequence(segment, directory, species, frame):
+def fetch_sequence(segment, directory, species, frame, retry_limit=3):
     """
-    Uses the constrcted url and fetches the response based on the url. 
-    It checks the response code. If it is equal 200 the response is
-    scraped otherwise it is logged that it failed to retrieve data from IMGT server.
-    it also checks if something is found after scraping. 
-    Otherwise it logs that it could not scrape any data from the response.
-    In the end a 2 second sleep it called to avoid overloading the IMGT server.
-
+    Fetches sequence data from IMGT server using a constructed URL and handles failures with specified retry logic.
+    Implements differentiated wait times based on the cause of retry need.
 
     Args:
-        segment (str): The segment type itself.
-        directory (Path): Path to the directory.
-        species (str): The chosen species, which is choses from the
-        argparse list for species.
-        frame (str): the chosen frame, which is choses from the argparse
-        list for regarding frame.
+        segment (str): The segment type.
+        directory (Path): Directory path where sequence data is to be stored.
+        species (str): Species name.
+        frame (str): Frame specification.
+        retry_limit (int): Maximum number of retries for fetching data.
     """
-    url = construct_url(segment, species, frame)
-    response = requests.get(url)
-    if response.status_code == 200:
-        sequence = scrape(response)
-        if sequence:
-            write_sequence(segment, directory, sequence)
+    for attempt in range(retry_limit):
+        url = construct_url(segment, species, frame)
+        response = requests.get(url)
+        sleep_time = 2
+        if response.status_code == 200:
+            sequence = scrape(response)
+            if sequence:
+                empty_value = write_sequence(segment, directory, sequence)
+                if not empty_value:
+                    logger.info("Sequence successfully retrieved and written.")
+                    break
+                else:
+                    sleep_time = 30
+                    logger.warning(
+                        "Retrieved sequence was empty. Will retry after extended wait.")
+            else:
+                logger.warning(
+                    f"No sequences found for {segment} of {species}.")
         else:
-            logger.warning(f"No sequences found for {segment} of {species}.")
-    else:
-        logger.warning(
-            f"Failed to fetch data for {segment} of {species}. Status code: {response.status_code}")
-    logger.info("Waiting 2 seconds to avoid overloading the IMGT server!")
-    time.sleep(2)
+            logger.warning(
+                f"Failed to fetch data for {segment} of {species} with status code: {response.status_code}")
+        logger.info(
+            f"Waiting {sleep_time} seconds to avoid overloading the IMGT server.")
+        time.sleep(sleep_time)
+    if attempt == retry_limit - 1 and response.status_code == 200 and not sequence:
+        logger.error(
+            f"Max retries reached for {segment} of {species} without successful data retrieval.")
 
 
 def scrape_IMGT(species, immune_type, directory, frame):
