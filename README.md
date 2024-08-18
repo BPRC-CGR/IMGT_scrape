@@ -2,7 +2,7 @@
 
 ## Overview
 
-This script automates scraping of immunogenetics (IG) and T-cell receptor (TCR) VDJ segment sequences from the International ImMunoGeneTics Information System (IMGT) for specified species. Which is specified in the **--help**. It supports fetching sequences in various open reading frame (ORF) analysis types and consolidates them into a single sequence library. Additionally, it offers a cleanup **--cleanup** function to remove the individual fasta files by deleting downloaded these after processing.
+This script automates scraping of immunogenetics (IG) and T-cell receptor (TCR) VDJ segment sequences from the International ImMunoGeneTics Information System (IMGT) for specified species. Which is specified in the **--help**. It supports fetching sequences in various open reading frame (ORF) analysis types and consolidates them into a single sequence library. Additionally, it offers a cleanup **--cleanup** function to remove the individual fasta files by deleting downloaded, these after processing.
 
 ## Features
 

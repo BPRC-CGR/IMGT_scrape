@@ -11,8 +11,8 @@ from datetime import datetime
 from logger import custom_logger
 
 logger = custom_logger(__name__)
-log_info = []  # List to collect log information
 fasta_files_info = []  # List to collect fasta file information
+total_count = 0
 
 
 def make_dir(dir):
@@ -37,8 +37,6 @@ def cleanup(directory):
     for file in directory.glob("*.fasta"):
         Path(file).unlink()
     Path(directory).rmdir()
-    log_info.append(
-        {"message": f"Deleted folder: {directory.name}, because --cleanup was selected", "level": "warning"})
     logger.info(
         f"Deleting folder: {directory.name}, because --cleanup was selected")
 
@@ -77,8 +75,6 @@ def create_library(directory: Path, simple_headers):
                 if simple_headers:
                     record.description = edit_header(record.description)
                 w.write(f">{record.description}\n{record.seq.upper()}\n")
-    log_info.append(
-        {"message": "Library created from generated files.", "level": "success"})
     logger.info("Creating a library from generated files.")
 
 
@@ -128,8 +124,6 @@ def scrape(response):
     for p in paragraphs:
         seq = p.text.strip()
         if ">" in seq:
-            log_info.append(
-                {"message": "Succeeded to retrieve sequences from IMGT.", "level": "success"})
             logger.info("Succeeded to retrieve sequences from IMGT")
             return seq
 
@@ -171,20 +165,15 @@ def write_sequence(name, directory, sequence):
         sequence (str): Large string containing all the different sequences
         for a current VDJ segment.
     """
+    global total_count
     file = directory / f"{name}.fasta"
-    log_info.append(
-        {"message": f"Writing sequences from {name} to {file.name}.", "level": "success"})
     logger.info(f"Writing sequences from {name} to {file.name}")
     with open(file, 'w') as f:
         f.write(str(sequence) + "\n")
-    # Count the number of entries in the fasta file
     count = sum(1 for _ in SeqIO.parse(file, "fasta"))
+    total_count += count
     fasta_files_info.append({"name": file.name, "entries": count})
     return file_empty(file)
-
-    # Count the number of entries in the fasta file
-    count = sum(1 for _ in SeqIO.parse(file, "fasta"))
-    fasta_files_info.append({"name": file.name, "entries": count})
 
 
 def fetch_sequence(segment, directory, species, frame, retry_limit=3):
@@ -259,25 +248,20 @@ def scrape_IMGT(species, immune_type, directory, frame):
         ]
     }
     if not directory.exists():
-        log_info.append(
-            {"message": f"Folder created: {directory.name}.", "level": "success"})
         logger.info(f"Folder {directory.name} does not exist, creating it!")
         make_dir(directory)
     for segment in segments[immune_type]:
         segment_file = directory / f"{segment}.fasta"
-        log_info.append(
-            {"message": f"Retrieving sequences from IMGT for the {segment} of {species}.", "level": "info"})
         logger.info(
             f"Retrieving sequences from IMGT for the {segment} of {species}")
         if not Path(segment_file).exists():
             fetch_sequence(segment, directory, species, frame)
         else:
-            # Count the number of entries in the fasta file
+            global total_count
             count = sum(1 for _ in SeqIO.parse(segment_file, "fasta"))
+            total_count += count
             fasta_files_info.append(
                 {"name": segment_file.name, "entries": count})
-            log_info.append(
-                {"message": f"File exists: {segment}.fasta already exists, skipping!", "level": "info"})
             logger.info(f"File {segment}.fasta already exists skipping!")
             time.sleep(2)
 
@@ -386,7 +370,6 @@ def save_log_to_html(release, fasta_files_info, file_path, args):
     Save the collected log information to an HTML file using Jinja2 template.
 
     Args:
-        log_info (list): List of log strings to save.
         fasta_files_info (list): List of dictionaries containing fasta file names and number of entries.
         file_path (str): Path to the HTML file.
         args (argparse.Namespace): Parsed command line arguments.
@@ -406,7 +389,8 @@ def save_log_to_html(release, fasta_files_info, file_path, args):
         create_library=args.create_library,
         cleanup=args.cleanup,
         simple_headers=args.simple_headers,
-        fasta_files=fasta_files_info
+        fasta_files=fasta_files_info,
+        total_segments=total_count
     )
 
     with open(file_path, 'w') as html_file:
@@ -427,8 +411,6 @@ def main():
     """
     global args  # Make args global to access it in save_log_to_html function
     args = argparser_setup()
-    log_info.append(
-        {"message": f"Starting scrape for species: {args.species}, type: {args.type}.", "level": "info"})
     logger.info(
         f"Starting scrape for species: {args.species}, type: {args.type}")
 
@@ -442,9 +424,6 @@ def main():
 
     if args.cleanup:
         cleanup(output_dir)
-
-    log_info.append(
-        {"message": "Scrape completed successfully.", "level": "success"})
     logger.info("Scrape completed successfully.")
 
     # Save log to HTML
